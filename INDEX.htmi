@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teachable Machine — Live AI Vision Studio</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono for technical precision -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- TensorFlow.js & Teachable Machine Image Library via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-900">
+  <!-- Top Navigation / Status Header -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-sm shadow-brand-600/20">
+          <!-- Custom SVG Vision Aperture Icon -->
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-slate-900 tracking-tight text-base sm:text-lg block leading-none">Vision Studio</span>
+          <span class="text-xs text-slate-500 font-medium">Teachable Machine Inference</span>
+        </div>
+      </div>
+
+      <!-- Model Status Pill -->
+      <div class="flex items-center gap-3">
+        <div id="model-status-pill" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/80 transition-colors">
+          <span id="model-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="model-status-text">Initializing Model...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+    <!-- Hero / Introduction Section (Clear Hierarchy & Whitespace) -->
+    <section class="mb-8 sm:mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div class="max-w-2xl">
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-brand-50 text-brand-700 text-xs font-semibold tracking-wide uppercase mb-3 border border-brand-100">
+          Real-Time Browser AI
+        </div>
+        <h1 class="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight">
+          Live Image Classification Workspace
+        </h1>
+        <p class="mt-2.5 text-sm sm:text-base text-slate-600 leading-relaxed">
+          Classify visual inputs directly in your browser with zero server latency. Start your webcam for real-time frame analysis or upload a static image to inspect class confidence scores.
+        </p>
+      </div>
+
+      <!-- Model Endpoint Quick Reference Badge -->
+      <div class="flex flex-wrap items-center gap-2 bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-xs text-xs text-slate-600">
+        <span class="font-medium text-slate-400">Model ID:</span>
+        <code id="model-url-display" class="font-mono text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">_3rpYd-X6</code>
+        <button
+          id="copy-url-btn"
+          type="button"
+          class="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors cursor-pointer"
+          title="Copy Teachable Machine Model URL"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span id="copy-url-label">Copy URL</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Non-intrusive Alert / Notification Banner -->
+    <div id="alert-banner" class="hidden mb-6 rounded-2xl border p-4 flex items-start gap-3 transition-all" role="alert">
+      <div id="alert-icon" class="mt-0.5 shrink-0"></div>
+      <div class="flex-1 text-sm">
+        <h3 id="alert-title" class="font-semibold"></h3>
+        <p id="alert-message" class="mt-0.5 opacity-90"></p>
+      </div>
+      <button id="alert-close-btn" type="button" class="p-1 rounded-lg hover:bg-black/5 transition-colors cursor-pointer" aria-label="Dismiss notification">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Balanced 12-Column Interactive Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+      <!-- LEFT PANEL: Visual Input Stage (7 columns on desktop) -->
+      <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
+        <!-- Panel Header & Mode Switcher Tabs -->
+        <div class="px-5 sm:px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
+            <h2 class="font-semibold text-slate-900 text-base">Visual Input Feed</h2>
+          </div>
+
+          <!-- Segmented Control: Webcam vs Image Upload -->
+          <div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200/60" role="tablist">
+            <button
+              id="tab-webcam"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs cursor-pointer"
+            >
+              Live Webcam
+            </button>
+            <button
+              id="tab-upload"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              Upload Image
+            </button>
+          </div>
+        </div>
+
+        <!-- Viewport Stage (1:1 or 4:3 Responsive Container) -->
+        <div class="p-5 sm:p-6">
+          <div class="relative w-full aspect-square sm:aspect-[4/3] max-h-[460px] mx-auto rounded-2xl bg-slate-900 overflow-hidden border border-slate-200 flex items-center justify-center group">
+            <!-- Idle / Placeholder State -->
+            <div id="stage-placeholder" class="text-center px-6 py-8 max-w-sm">
+              <div class="w-14 h-14 rounded-2xl bg-slate-800 text-slate-300 flex items-center justify-center mx-auto mb-4 border border-slate-700">
+                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 id="placeholder-title" class="text-white font-semibold text-base">Camera Feed Ready</h3>
+              <p id="placeholder-desc" class="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
+                Click <strong class="text-slate-200">Start Webcam</strong> below to begin real-time inference, or switch to <strong class="text-slate-200">Upload Image</strong> to test a file.
+              </p>
+            </div>
+
+            <!-- Webcam Canvas Mount Container -->
+            <div id="webcam-container" class="hidden w-full h-full flex items-center justify-center [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover"></div>
+
+            <!-- Uploaded Image Preview Element -->
+            <img
+              id="uploaded-image-preview"
+              alt="Uploaded classification input"
+              class="hidden w-full h-full object-contain bg-slate-950"
+            />
+
+            <!-- Live Overlay Badge (FPS & Active Mode) -->
+            <div id="live-overlay-badge" class="hidden absolute top-3.5 left-3.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/75 backdrop-blur-md text-white text-xs font-medium border border-white/10">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="live-overlay-text">LIVE</span>
+              <span id="fps-counter" class="font-mono text-[11px] text-slate-300 border-l border-white/20 pl-2 ml-0.5">-- FPS</span>
+            </div>
+          </div>
+
+          <!-- Webcam Controls Bar -->
+          <div id="webcam-controls" class="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <button
+                id="btn-start-webcam"
+                type="button"
+                disabled
+                class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm shadow-brand-600/20 transition-all cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Start Webcam</span>
+              </button>
+
+              <button
+                id="btn-stop-webcam"
+                type="button"
+                class="hidden inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm shadow-sm shadow-rose-600/20 transition-all cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+                <span>Stop Webcam</span>
+              </button>
+
+              <button
+                id="btn-flip-camera"
+                type="button"
+                disabled
+                class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-medium text-sm transition-colors cursor-pointer"
+                title="Switch between front and rear camera"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span id="camera-facing-label">Front Camera</span>
+              </button>
+            </div>
+
+            <span class="text-xs text-slate-400">
+              Processed locally on your GPU
+            </span>
+          </div>
+
+          <!-- Image Upload Controls Bar -->
+          <div id="upload-controls" class="hidden mt-5">
+            <label
+              for="image-file-input"
+              id="dropzone-area"
+              class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50/70 hover:bg-brand-50/30 transition-all cursor-pointer"
+            >
+              <div class="flex items-center gap-3.5 text-left">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 text-brand-600 flex items-center justify-center shrink-0 shadow-2xs">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">Choose an image or drag &amp; drop here</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Supports PNG, JPG, WEBP up to 10MB</p>
+                </div>
+              </div>
+              <span class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs shadow-2xs shrink-0">
+                Browse Files
+              </span>
+              <input id="image-file-input" type="file" accept="image/*" class="sr-only" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: Real-Time Prediction Readout & Confidence Bars (5 columns on desktop) -->
+      <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
+        <!-- Panel Header -->
+        <div class="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h2 class="font-semibold text-slate-900 text-base">Classification Output</h2>
+          </div>
+          <span id="class-count-badge" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+            Loading classes...
+          </span>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-6">
+          <!-- Primary Hero Prediction Card (Visual Hierarchy Focal Point) -->
+          <div id="top-prediction-card" class="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 shadow-sm relative overflow-hidden">
+            <div class="relative z-10">
+              <div class="flex items-center justify-between gap-2 text-xs font-medium text-slate-300 uppercase tracking-wider">
+                <span>Top Predicted Class</span>
+                <span id="inference-state-tag" class="px-2 py-0.5 rounded bg-white/10 text-slate-200 font-mono text-[11px]">STANDBY</span>
+              </div>
+
+              <div class="mt-3 flex items-baseline justify-between gap-4">
+                <h3 id="top-class-name" class="text-2xl sm:text-3xl font-bold tracking-tight text-white truncate">
+                  Awaiting Input
+                </h3>
+                <span id="top-class-score" class="font-mono text-2xl sm:text-3xl font-bold text-brand-400 shrink-0">
+                  0.0%
+                </span>
+              </div>
+
+              <!-- Dominant Confidence Meter -->
+              <div class="mt-4 w-full h-2 rounded-full bg-white/15 overflow-hidden">
+                <div id="top-class-bar" class="h-full rounded-full bg-brand-400 transition-all duration-150 ease-out" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sorted All-Classes Confidence Breakdown -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Confidence Distribution (Sorted)
+              </h3>
+              <span class="text-xs text-slate-400">Probability %</span>
+            </div>
+
+            <!-- Dynamic Class Bars Container -->
+            <div id="predictions-list" class="space-y-3">
+              <!-- Skeleton Placeholders while model loads -->
+              <div class="animate-pulse space-y-3">
+                <div class="h-14 rounded-xl bg-slate-100"></div>
+                <div class="h-14 rounded-xl bg-slate-100"></div>
+                <div class="h-14 rounded-xl bg-slate-100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Clean Informative Footer -->
+  <footer class="mt-auto border-t border-slate-200/80 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+        <span class="font-medium text-slate-700">Embedded Model:</span>
+        <a
+          href="https://teachablemachine.withgoogle.com/models/_3rpYd-X6/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-mono text-brand-600 hover:text-brand-700 underline underline-offset-2 break-all"
+        >
+          https://teachablemachine.withgoogle.com/models/_3rpYd-X6/
+        </a>
+      </div>
+      <div class="text-center sm:text-right text-slate-400">
+        Designed with visual hierarchy, responsive grid balance &amp; client-side TensorFlow.js
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    /**
+     * Teachable Machine Live Classifier Application
+     * Embeds https://teachablemachine.withgoogle.com/models/_3rpYd-X6/
+     */
+    const MODEL_BASE_URL = "https://teachablemachine.withgoogle.com/models/_3rpYd-X6/";
+
+    // Application State
+    const state = {
+      model: null,
+      maxPredictions: 0,
+      classLabels: [],
+      webcam: null,
+      isWebcamRunning: false,
+      animationFrameId: null,
+      facingMode: "user", // "user" (front) or "environment" (back)
+      activeTab: "webcam", // "webcam" | "upload"
+      lastFrameTime: performance.now(),
+      frameCount: 0,
+    };
+
+    // DOM Element References
+    const el = {
+      statusPill: document.getElementById("model-status-pill"),
+      statusDot: document.getElementById("model-status-dot"),
+      statusText: document.getElementById("model-status-text"),
+      copyUrlBtn: document.getElementById("copy-url-btn"),
+      copyUrlLabel: document.getElementById("copy-url-label"),
+      alertBanner: document.getElementById("alert-banner"),
+      alertIcon: document.getElementById("alert-icon"),
+      alertTitle: document.getElementById("alert-title"),
+      alertMessage: document.getElementById("alert-message"),
+      alertCloseBtn: document.getElementById("alert-close-btn"),
+      tabWebcam: document.getElementById("tab-webcam"),
+      tabUpload: document.getElementById("tab-upload"),
+      stagePlaceholder: document.getElementById("stage-placeholder"),
+      placeholderTitle: document.getElementById("placeholder-title"),
+      placeholderDesc: document.getElementById("placeholder-desc"),
+      webcamContainer: document.getElementById("webcam-container"),
+      uploadedImagePreview: document.getElementById("uploaded-image-preview"),
+      liveOverlayBadge: document.getElementById("live-overlay-badge"),
+      liveOverlayText: document.getElementById("live-overlay-text"),
+      fpsCounter: document.getElementById("fps-counter"),
+      webcamControls: document.getElementById("webcam-controls"),
+      uploadControls: document.getElementById("upload-controls"),
+      btnStartWebcam: document.getElementById("btn-start-webcam"),
+      btnStopWebcam: document.getElementById("btn-stop-webcam"),
+      btnFlipCamera: document.getElementById("btn-flip-camera"),
+      cameraFacingLabel: document.getElementById("camera-facing-label"),
+      dropzoneArea: document.getElementById("dropzone-area"),
+      imageFileInput: document.getElementById("image-file-input"),
+      classCountBadge: document.getElementById("class-count-badge"),
+      inferenceStateTag: document.getElementById("inference-state-tag"),
+      topClassName: document.getElementById("top-class-name"),
+      topClassScore: document.getElementById("top-class-score"),
+      topClassBar: document.getElementById("top-class-bar"),
+      predictionsList: document.getElementById("predictions-list"),
+    };
+
+    /**
+     * Displays a non-intrusive status banner in the UI
+     * @param {"error" | "warning" | "info"} type
+     * @param {string} title
+     * @param {string} message
+     */
+    function showAlert(type, title, message) {
+      const styles = {
+        error: {
+          wrapper: "bg-rose-50 border-rose-200 text-rose-900",
+          icon: `<svg class="w-5 h-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+        },
+        warning: {
+          wrapper: "bg-amber-50 border-amber-200 text-amber-900",
+          icon: `<svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`,
+        },
+        info: {
+          wrapper: "bg-brand-50 border-brand-200 text-brand-900",
+          icon: `<svg class="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+        },
+      };
+
+      const selected = styles[type] || styles.info;
+      el.alertBanner.className = `mb-6 rounded-2xl border p-4 flex items-start gap-3 transition-all ${selected.wrapper}`;
+      el.alertIcon.innerHTML = selected.icon;
+      el.alertTitle.textContent = title;
+      el.alertMessage.textContent = message;
+      el.alertBanner.classList.remove("hidden");
+    }
+
+    function hideAlert() {
+      el.alertBanner.classList.add("hidden");
+    }
+
+    /**
+     * Updates the top navigation status indicator pill
+     */
+    function setModelStatus(status, text) {
+      el.statusText.textContent = text;
+      if (status === "ready") {
+        el.statusPill.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/80 transition-colors";
+        el.statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+      } else if (status === "error") {
+        el.statusPill.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/80 transition-colors";
+        el.statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+      } else {
+        el.statusPill.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/80 transition-colors";
+        el.statusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+      }
+    }
+
+    /**
+     * Loads the Teachable Machine model.json and metadata.json
+     */
+    async function initModel() {
+      try {
+        setModelStatus("loading", "Loading Model...");
+        const modelURL = MODEL_BASE_URL + "model.json";
+        const metadataURL = MODEL_BASE_URL + "metadata.json";
+
+        state.model = await tmImage.load(modelURL, metadataURL);
+        state.maxPredictions = state.model.getTotalClasses();
+        state.classLabels = state.model.getClassLabels();
+
+        // Update UI with loaded class metadata
+        setModelStatus("ready", "Model Ready");
+        el.classCountBadge.textContent = `${state.maxPredictions} ${state.maxPredictions === 1 ? "Class" : "Classes"}`;
+        el.btnStartWebcam.disabled = false;
+
+        // Render initial zeroed confidence bars
+        const initialPredictions = state.classLabels.map((label) => ({
+          className: label,
+          probability: 0,
+        }));
+        renderPredictions(initialPredictions, false);
+      } catch (err) {
+        console.error("Model load failure:", err);
+        setModelStatus("error", "Model Load Failed");
+        showAlert(
+          "error",
+          "Unable to Load Teachable Machine Model",
+          "Please check your internet connection or verify that the model URL is publicly accessible."
+        );
+      }
+    }
+
+    /**
+     * Renders sorted prediction bars and highlights the dominant class
+     * @param {Array<{className: string, probability: number}>} predictions
+     * @param {boolean} isActiveInput
+     */
+    function renderPredictions(predictions, isActiveInput = true) {
+      // Sort predictions descending by probability
+      const sorted = [...predictions].sort((a, b) => b.probability - a.probability);
+      const top = sorted[0];
+
+      // Update Hero Top Prediction Card
+      if (isActiveInput && top) {
+        const topPct = (top.probability * 100).toFixed(1);
+        el.topClassName.textContent = top.className;
+        el.topClassScore.textContent = `${topPct}%`;
+        el.topClassBar.style.width = `${Math.min(100, Math.max(0, top.probability * 100))}%`;
+        el.inferenceStateTag.textContent = state.isWebcamRunning ? "LIVE STREAM" : "STATIC IMAGE";
+        el.inferenceStateTag.className = "px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[11px]";
+      } else {
+        el.topClassName.textContent = "Awaiting Input";
+        el.topClassScore.textContent = "0.0%";
+        el.topClassBar.style.width = "0%";
+        el.inferenceStateTag.textContent = "STANDBY";
+        el.inferenceStateTag.className = "px-2 py-0.5 rounded bg-white/10 text-slate-200 font-mono text-[11px]";
+      }
+
+      // Render Sorted Individual Class Cards
+      el.predictionsList.innerHTML = sorted
+        .map((item, idx) => {
+          const pct = (item.probability * 100).toFixed(1);
+          const isWinner = isActiveInput && idx === 0 && item.probability > 0.01;
+
+          const cardStyle = isWinner
+            ? "bg-brand-50/70 border-brand-200 ring-1 ring-brand-500/20"
+            : "bg-slate-50/80 border-slate-200/70";
+
+          const barColor = isWinner ? "bg-brand-600" : "bg-slate-400";
+          const labelColor = isWinner ? "text-brand-950 font-semibold" : "text-slate-700 font-medium";
+          const scoreColor = isWinner ? "text-brand-700 font-bold" : "text-slate-600 font-medium";
+
+          return `
+            <div class="p-3.5 rounded-2xl border transition-all duration-150 ${cardStyle}">
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-white border border-slate-200/80 text-slate-500">
+                    #${idx + 1}
+                  </span>
+                  <span class="text-sm truncate ${labelColor}" title="${escapeHtml(item.className)}">
+                    ${escapeHtml(item.className)}
+                  </span>
+                </div>
+                <span class="font-mono text-sm shrink-0 ${scoreColor}">${pct}%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-200/80 overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all duration-150 ease-out ${barColor}"
+                  style="width: ${Math.min(100, Math.max(0, item.probability * 100))}%"
+                ></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    /**
+     * Starts the live webcam feed and begins the requestAnimationFrame loop
+     */
+    async function startWebcam() {
+      if (!state.model) return;
+      hideAlert();
+
+      try {
+        el.btnStartWebcam.disabled = true;
+        el.btnStartWebcam.querySelector("span").textContent = "Starting Camera...";
+
+        // Stop existing webcam instance if switching cameras
+        if (state.webcam) {
+          await stopWebcam(false);
+        }
+
+        const flip = state.facingMode === "user";
+        state.webcam = new tmImage.Webcam(400, 400, flip);
+
+        await state.webcam.setup({ facingMode: state.facingMode });
+        await state.webcam.play();
+
+        // Mount canvas into DOM
+        el.webcamContainer.innerHTML = "";
+        el.webcamContainer.appendChild(state.webcam.canvas);
+
+        // Update UI visibility states
+        state.isWebcamRunning = true;
+        el.stagePlaceholder.classList.add("hidden");
+        el.uploadedImagePreview.classList.add("hidden");
+        el.webcamContainer.classList.remove("hidden");
+        el.liveOverlayBadge.classList.remove("hidden");
+        el.liveOverlayText.textContent = "LIVE WEBCAM";
+
+        el.btnStartWebcam.classList.add("hidden");
+        el.btnStopWebcam.classList.remove("hidden");
+        el.btnFlipCamera.disabled = false;
+        el.cameraFacingLabel.textContent = state.facingMode === "user" ? "Front Camera" : "Rear Camera";
+
+        state.lastFrameTime = performance.now();
+        state.frameCount = 0;
+        loopWebcam();
+      } catch (err) {
+        console.error("Webcam access error:", err);
+        state.isWebcamRunning = false;
+        el.btnStartWebcam.disabled = false;
+        el.btnStartWebcam.querySelector("span").textContent = "Start Webcam";
+
+        showAlert(
+          "warning",
+          "Camera Access Denied or Unavailable",
+          "Please allow camera permissions in your browser settings, or switch to the 'Upload Image' tab to classify a photo from your device."
+        );
+      }
+    }
+
+    /**
+     * Continuous inference loop for webcam frames
+     */
+    async function loopWebcam() {
+      if (!state.isWebcamRunning || !state.webcam) return;
+
+      state.webcam.update();
+      const predictions = await state.model.predict(state.webcam.canvas);
+      renderPredictions(predictions, true);
+
+      // Update lightweight FPS counter every 500ms
+      state.frameCount++;
+      const now = performance.now();
+      if (now - state.lastFrameTime >= 500) {
+        const fps = Math.round((state.frameCount * 1000) / (now - state.lastFrameTime));
+        el.fpsCounter.textContent = `${fps} FPS`;
+        state.frameCount = 0;
+        state.lastFrameTime = now;
+      }
+
+      state.animationFrameId = window.requestAnimationFrame(loopWebcam);
+    }
+
+    /**
+     * Stops the webcam stream and resets stage controls
+     * @param {boolean} resetUI
+     */
+    async function stopWebcam(resetUI = true) {
+      state.isWebcamRunning = false;
+      if (state.animationFrameId) {
+        cancelAnimationFrame(state.animationFrameId);
+        state.animationFrameId = null;
+      }
+
+      if (state.webcam) {
+        try {
+          await state.webcam.stop();
+        } catch (e) {
+          console.warn("Error stopping webcam stream:", e);
+        }
+        state.webcam = null;
+      }
+
+      if (resetUI) {
+        el.webcamContainer.classList.add("hidden");
+        el.webcamContainer.innerHTML = "";
+        el.liveOverlayBadge.classList.add("hidden");
+        el.stagePlaceholder.classList.remove("hidden");
+
+        el.btnStopWebcam.classList.add("hidden");
+        el.btnStartWebcam.classList.remove("hidden");
+        el.btnStartWebcam.disabled = !state.model;
+        el.btnStartWebcam.querySelector("span").textContent = "Start Webcam";
+        el.btnFlipCamera.disabled = true;
+
+        // Reset confidence meters to standby
+        const zeroPredictions = state.classLabels.map((label) => ({
+          className: label,
+          probability: 0,
+        }));
+        renderPredictions(zeroPredictions, false);
+      }
+    }
+
+    /**
+     * Toggles between Front ("user") and Rear ("environment") cameras
+     */
+    async function toggleCameraFacing() {
+      state.facingMode = state.facingMode === "user" ? "environment" : "user";
+      el.cameraFacingLabel.textContent = state.facingMode === "user" ? "Front Camera" : "Rear Camera";
+      if (state.isWebcamRunning) {
+        await startWebcam();
+      }
+    }
+
+    /**
+     * Handles static image file uploads and runs single-frame classification
+     * @param {File} file
+     */
+    function handleImageFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        showAlert("error", "Invalid File Format", "Please select a valid image file (PNG, JPG, or WEBP).");
+        return;
+      }
+
+      if (!state.model) {
+        showAlert("warning", "Model Still Loading", "Please wait a moment for the AI model to finish initializing.");
+        return;
+      }
+
+      hideAlert();
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        el.uploadedImagePreview.onload = async () => {
+          // Display image in stage
+          el.stagePlaceholder.classList.add("hidden");
+          el.webcamContainer.classList.add("hidden");
+          el.uploadedImagePreview.classList.remove("hidden");
+          el.liveOverlayBadge.classList.remove("hidden");
+          el.liveOverlayText.textContent = "IMAGE ANALYSIS";
+          el.fpsCounter.textContent = "1 FRAME";
+
+          // Predict on the loaded HTMLImageElement
+          const predictions = await state.model.predict(el.uploadedImagePreview);
+          renderPredictions(predictions, true);
+        };
+        el.uploadedImagePreview.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * Switches between "webcam" and "upload" workspace modes
+     */
+    async function switchTab(targetTab) {
+      if (state.activeTab === targetTab) return;
+      state.activeTab = targetTab;
+      hideAlert();
+
+      if (targetTab === "webcam") {
+        // Style tabs
+        el.tabWebcam.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs cursor-pointer";
+        el.tabWebcam.setAttribute("aria-selected", "true");
+        el.tabUpload.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 cursor-pointer";
+        el.tabUpload.setAttribute("aria-selected", "false");
+
+        // Toggle control bars
+        el.uploadControls.classList.add("hidden");
+        el.webcamControls.classList.remove("hidden");
+
+        // Reset stage to webcam ready state
+        el.uploadedImagePreview.classList.add("hidden");
+        el.liveOverlayBadge.classList.add("hidden");
+        el.stagePlaceholder.classList.remove("hidden");
+        el.placeholderTitle.textContent = "Camera Feed Ready";
+        el.placeholderDesc.innerHTML = `Click <strong class="text-slate-200">Start Webcam</strong> below to begin real-time inference.`;
+
+        const zeroPredictions = state.classLabels.map((label) => ({ className: label, probability: 0 }));
+        renderPredictions(zeroPredictions, false);
+      } else {
+        // Stop active webcam if running
+        if (state.isWebcamRunning) {
+          await stopWebcam(false);
+        }
+
+        // Style tabs
+        el.tabUpload.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs cursor-pointer";
+        el.tabUpload.setAttribute("aria-selected", "true");
+        el.tabWebcam.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 cursor-pointer";
+        el.tabWebcam.setAttribute("aria-selected", "false");
+
+        // Toggle control bars
+        el.webcamControls.classList.add("hidden");
+        el.uploadControls.classList.remove("hidden");
+
+        // Reset stage to upload prompt
+        el.webcamContainer.classList.add("hidden");
+        el.liveOverlayBadge.classList.add("hidden");
+        el.stagePlaceholder.classList.remove("hidden");
+        el.placeholderTitle.textContent = "Upload an Image to Classify";
+        el.placeholderDesc.innerHTML = `Select a photo using the dropzone below to inspect class confidence scores.`;
+
+        const zeroPredictions = state.classLabels.map((label) => ({ className: label, probability: 0 }));
+        renderPredictions(zeroPredictions, false);
+      }
+    }
+
+    /**
+     * Copies the Teachable Machine URL to clipboard using execCommand fallback
+     */
+    function copyModelUrl() {
+      const tempInput = document.createElement("input");
+      tempInput.value = MODEL_BASE_URL;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand("copy");
+        el.copyUrlLabel.textContent = "Copied!";
+        setTimeout(() => {
+          el.copyUrlLabel.textContent = "Copy URL";
+        }, 2000);
+      } catch (err) {
+        console.warn("Copy failed:", err);
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    /**
+     * Basic HTML escaping helper for dynamic class names
+     */
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Event Listeners
+    el.btnStartWebcam.addEventListener("click", startWebcam);
+    el.btnStopWebcam.addEventListener("click", () => stopWebcam(true));
+    el.btnFlipCamera.addEventListener("click", toggleCameraFacing);
+    el.tabWebcam.addEventListener("click", () => switchTab("webcam"));
+    el.tabUpload.addEventListener("click", () => switchTab("upload"));
+    el.copyUrlBtn.addEventListener("click", copyModelUrl);
+    el.alertCloseBtn.addEventListener("click", hideAlert);
+
+    el.imageFileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleImageFile(e.target.files[0]);
+      }
+    });
+
+    // Drag-and-drop support on the upload zone
+    el.dropzoneArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      el.dropzoneArea.classList.add("border-brand-500", "bg-brand-50/50");
+    });
+
+    el.dropzoneArea.addEventListener("dragleave", () => {
+      el.dropzoneArea.classList.remove("border-brand-500", "bg-brand-50/50");
+    });
+
+    el.dropzoneArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      el.dropzoneArea.classList.remove("border-brand-500", "bg-brand-50/50");
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleImageFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Initialize model on page load
+    window.addEventListener("DOMContentLoaded", initModel);
+  </script>
+</body>
+</html>
